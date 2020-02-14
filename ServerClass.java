@@ -12,39 +12,60 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.Scanner;
 
 public class ServerClass {
-	private static final int SERVER_PORT = 4506;
-	private static ArrayList<String> logins = new ArrayList<String>(5);
-	private static ArrayList<String> passwords = new ArrayList<String>(5);
+	private static final int SERVER_PORT = 4511;
+	private static ArrayList<UserClass> users = new ArrayList<UserClass>(5);
 	private static String message;
+	//private static LinkedList<String> onlineUsers = new LinkedList<String>();
 	
 	private static void writeDatabase() throws IOException{ //функция записи записи в файл
 		FileWriter output_logins = new FileWriter("Logins.txt");
 		FileWriter output_passwords = new FileWriter("Passwords.txt");
-		for(int i=0; i<logins.size(); i++){
-			output_logins.write(logins.get(i)+'\n');
-			output_passwords.write(passwords.get(i)+'\n');
+		FileWriter output_ip = new FileWriter("IP.txt");
+		FileWriter output_ports = new FileWriter("Ports.txt");
+		for(int i=0; i<users.size(); i++){
+			output_logins.write(users.get(i).get_login()+'\n');
+			output_passwords.write(users.get(i).get_password()+'\n');
+			output_ip.write(users.get(i).get_ip()+'\n');
+			Integer port = users.get(i).get_port();
+			output_ports.write(port.toString()+'\n');
 		}
 		output_logins.close();
 		output_passwords.close();
+		output_ip.close();
+		output_ports.close();
 	}
 	
 	private static void readDatabase() throws IOException{ //функция чтения файла
 		FileReader input_logins = new FileReader("Logins.txt");
 		FileReader input_passwords = new FileReader("Passwords.txt");
+		FileReader input_ip = new FileReader("IP.txt");
+		FileReader input_ports = new FileReader("Ports.txt");
 		Scanner scan_logins = new Scanner(input_logins);
 		Scanner scan_passwords = new Scanner(input_passwords);
-		while(scan_logins.hasNextLine()){
-			logins.add(scan_logins.nextLine());
-		}
-		while(scan_passwords.hasNextLine()){
-			passwords.add(scan_passwords.nextLine());
+		Scanner scan_ip = new Scanner(input_ip);
+		Scanner scan_ports = new Scanner(input_ports);
+		while(scan_logins.hasNextLine()&&scan_passwords.hasNextLine()&&scan_ip.hasNextLine()&&scan_ports.hasNextLine()){
+			users.add(new UserClass(scan_logins.nextLine(), scan_passwords.nextLine(), scan_ip.nextLine(), Integer.parseInt(scan_ports.nextLine())));
 		}
 		input_logins.close();
 		input_passwords.close();
+		input_ip.close();
+		input_ports.close();
 	}
+	
+	private static int SearchUser(String name){
+		for(int i=0; i<users.size(); i++){
+			if(name.equals(users.get(i).get_login())){
+				return i;
+			}
+		}
+		return -1;
+	}
+	
 	public static void main(String[] args) throws IOException {
 		readDatabase();
 		final ServerSocket serverSocket = new ServerSocket(SERVER_PORT);
@@ -58,41 +79,71 @@ public class ServerClass {
 						final String login = in.readUTF();
 						final String password = in.readUTF();
 						message = "false";
-						for(int i=0; i<logins.size(); i++){
-							if(login.equals(logins.get(i)) && password.equals(passwords.get(i))){
+						for(int i=0; i<users.size(); i++){
+							if(login.equals(users.get(i).get_login()) && password.equals(users.get(i).get_password())){
 								message = "true";
 								break;
 							}
 						}
+						final String port = in.readUTF();
+						final String address = ((InetSocketAddress)socket.getRemoteSocketAddress()).getAddress().getHostAddress();
+						final Socket socket_out = new Socket(address, Integer.parseInt(port));
+						final DataOutputStream out = new DataOutputStream(socket_out.getOutputStream());
+						out.writeUTF(message);
+						socket_out.close();
+						
 					}
 					else if(work_type.equals("NEW_USER")){ //режим регистрации новой уч.записи
 						final String login = in.readUTF();
 						final String password = in.readUTF();
+						final String port = in.readUTF();
+						final String address = ((InetSocketAddress)socket.getRemoteSocketAddress()).getAddress().getHostAddress();
 						boolean repeated = false;
-						for(int i=0; i<logins.size(); i++){
-							if(login.equals(logins.get(i))){
+						for(int i=0; i<users.size(); i++){
+							if(login.equals(users.get(i).get_login())){
 								repeated = true;
 								break;
 							}
 						}
 						if(repeated == false){
-							logins.add(login);
-							passwords.add(password);
+							users.add(new UserClass(login, password, address, Integer.parseInt(port)));
 							message = "created";
 							writeDatabase();
 						}
 						else{
 							message = "not_created";
 						}
+						final Socket socket_out = new Socket(address, Integer.parseInt(port));
+						final DataOutputStream out = new DataOutputStream(socket_out.getOutputStream());
+						out.writeUTF(message);
+						socket_out.close();
 					}
-					final String port = in.readUTF();
-					// Выделяем IP-адрес
-					final String address = ((InetSocketAddress)socket.getRemoteSocketAddress()).getAddress().getHostAddress();
-					//открываю сокет для отправки сообщений
-					final Socket socket_out = new Socket(address, Integer.parseInt(port));
-					final DataOutputStream out = new DataOutputStream(socket_out.getOutputStream());
-					out.writeUTF(message);
-					socket_out.close();
+					else if(work_type.equals("TAKE_USERS_ONLINE")){ //режим ответа на запрос об пользователях онлайн
+						final String name = in.readUTF();
+						final int userNumber = SearchUser(name);
+						LinkedList<String> onlineUsers = new LinkedList<String>();
+						for(int i=0; i<users.size(); i++){
+							if(users.get(i).get_online() == true){
+								onlineUsers.add(users.get(i).get_login());
+							}
+						}
+						
+						final Socket socket_out = new Socket(users.get(userNumber).get_ip(), users.get(userNumber).get_port()+1);
+						final DataOutputStream out = new DataOutputStream(socket_out.getOutputStream());
+						Integer Size = onlineUsers.size();
+						out.writeUTF("TAKE_USERS_ONLINE"); //режим работы для клиента
+						out.writeUTF(Size.toString());
+						for(String user_name:onlineUsers){
+							out.writeUTF(name);							
+						}
+						socket_out.close();
+					}
+					else if(work_type.equals("USER_IS_ONLINE")){//режим оповещения кллиента онлайн
+						final String name = in.readUTF();
+						final int userNumber = SearchUser(name);
+						users.get(userNumber).set_online(true);
+						//без ответа
+					}
 				}
 				finally{
 					socket.close();
