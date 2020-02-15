@@ -2,24 +2,21 @@ package task7;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Scanner;
 
 public class ServerClass {
-	private static final int SERVER_PORT = 4511;
+	private static final int SERVER_PORT = 4506;
 	private static ArrayList<UserClass> users = new ArrayList<UserClass>(5);
 	private static String message;
-	//private static LinkedList<String> onlineUsers = new LinkedList<String>();
 	
 	private static void writeDatabase() throws IOException{ //функция записи записи в файл
 		FileWriter output_logins = new FileWriter("Logins.txt");
@@ -134,7 +131,7 @@ public class ServerClass {
 						out.writeUTF("TAKE_USERS_ONLINE"); //режим работы для клиента
 						out.writeUTF(Size.toString());
 						for(String user_name:onlineUsers){
-							out.writeUTF(name);							
+							out.writeUTF(user_name);							
 						}
 						socket_out.close();
 					}
@@ -144,6 +141,34 @@ public class ServerClass {
 						users.get(userNumber).set_online(true);
 						//без ответа
 					}
+					else if(work_type.equals("DIALOG")){
+						final String UserName = in.readUTF();
+						final int userNumber = SearchUser(UserName);
+						final String FriendName = in.readUTF();
+						final int friendNumber = SearchUser(FriendName);
+						if(users.get(friendNumber).get_online() == true){
+							message = in.readUTF();
+							final Socket socket_out = new Socket(users.get(friendNumber).get_ip(), users.get(friendNumber).get_port()+2);
+							final DataOutputStream out = new DataOutputStream(socket_out.getOutputStream());
+							out.writeUTF(message);
+							socket_out.close();
+						}
+						else{
+							message = "Пользователь недоступен";
+							final Socket socket_out = new Socket(users.get(userNumber).get_ip(), users.get(userNumber).get_port()+2);
+							final DataOutputStream out = new DataOutputStream(socket_out.getOutputStream());
+							out.writeUTF(message);
+							socket_out.close();
+						}
+					}
+				}
+				catch (UnknownHostException e){
+					e.printStackTrace();
+					System.out.println("Была ошибка. Работа продолжена.");
+				} 
+				catch (IOException e){
+					e.printStackTrace();
+					System.out.println("Была ошибка. Работа продолжена.");
 				}
 				finally{
 					socket.close();
