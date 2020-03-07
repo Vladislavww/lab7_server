@@ -14,7 +14,7 @@ import java.util.LinkedList;
 import java.util.Scanner;
 
 public class ServerClass {
-	private static final int SERVER_PORT = 4506;
+	private static final int SERVER_PORT = 4512;
 	private static ArrayList<UserClass> users = new ArrayList<UserClass>(5);
 	private static String message;
 	
@@ -86,6 +86,7 @@ public class ServerClass {
 						final String address = ((InetSocketAddress)socket.getRemoteSocketAddress()).getAddress().getHostAddress();
 						final Socket socket_out = new Socket(address, Integer.parseInt(port));
 						final DataOutputStream out = new DataOutputStream(socket_out.getOutputStream());
+						out.writeUTF(work_type);
 						out.writeUTF(message);
 						socket_out.close();
 						
@@ -112,6 +113,7 @@ public class ServerClass {
 						}
 						final Socket socket_out = new Socket(address, Integer.parseInt(port));
 						final DataOutputStream out = new DataOutputStream(socket_out.getOutputStream());
+						out.writeUTF(work_type);
 						out.writeUTF(message);
 						socket_out.close();
 					}
@@ -125,10 +127,10 @@ public class ServerClass {
 							}
 						}
 						
-						final Socket socket_out = new Socket(users.get(userNumber).get_ip(), users.get(userNumber).get_port()+1);
+						final Socket socket_out = new Socket(users.get(userNumber).get_ip(), users.get(userNumber).get_port());
 						final DataOutputStream out = new DataOutputStream(socket_out.getOutputStream());
 						Integer Size = onlineUsers.size();
-						out.writeUTF("TAKE_USERS_ONLINE"); //режим работы дл€ клиента
+						out.writeUTF(work_type);
 						out.writeUTF(Size.toString());
 						for(String user_name:onlineUsers){
 							out.writeUTF(user_name);							
@@ -148,15 +150,19 @@ public class ServerClass {
 						final int friendNumber = SearchUser(FriendName);
 						if(users.get(friendNumber).get_online() == true){
 							message = in.readUTF();
-							final Socket socket_out = new Socket(users.get(friendNumber).get_ip(), users.get(friendNumber).get_port()+2);
+							final Socket socket_out = new Socket(users.get(friendNumber).get_ip(), users.get(friendNumber).get_port());
 							final DataOutputStream out = new DataOutputStream(socket_out.getOutputStream());
+							out.writeUTF(work_type);
+							out.writeUTF(UserName);
 							out.writeUTF(message);
 							socket_out.close();
 						}
 						else{
 							message = "ѕользователь недоступен";
-							final Socket socket_out = new Socket(users.get(userNumber).get_ip(), users.get(userNumber).get_port()+2);
+							final Socket socket_out = new Socket(users.get(userNumber).get_ip(), users.get(userNumber).get_port());
 							final DataOutputStream out = new DataOutputStream(socket_out.getOutputStream());
+							out.writeUTF(work_type);
+							out.writeUTF(UserName);
 							out.writeUTF(message);
 							socket_out.close();
 						}
