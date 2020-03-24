@@ -46,7 +46,7 @@ public class ServerClass {
 		Scanner scan_ip = new Scanner(input_ip);
 		Scanner scan_ports = new Scanner(input_ports);
 		while(scan_logins.hasNextLine()&&scan_passwords.hasNextLine()&&scan_ip.hasNextLine()&&scan_ports.hasNextLine()){
-			users.add(new UserClass(scan_logins.nextLine(), scan_passwords.nextLine(), scan_ip.nextLine(), Integer.parseInt(scan_ports.nextLine())));
+			users.add(new UserClass(scan_logins.nextLine(), scan_passwords.nextLine()));
 		}
 		input_logins.close();
 		input_passwords.close();
@@ -75,14 +75,16 @@ public class ServerClass {
 					if(work_type.equals("CHECK_IN")){//режим проверки логина и пароля
 						final String login = in.readUTF();
 						final String password = in.readUTF();
+						final String port = in.readUTF();
 						message = "false";
 						for(int i=0; i<users.size(); i++){
 							if(login.equals(users.get(i).get_login()) && password.equals(users.get(i).get_password())){
 								message = "true";
+								users.get(i).set_ip(((InetSocketAddress)socket.getRemoteSocketAddress()).getAddress().getHostAddress());
+								users.get(i).set_port(Integer.parseInt(port));
 								break;
 							}
 						}
-						final String port = in.readUTF();
 						final String address = ((InetSocketAddress)socket.getRemoteSocketAddress()).getAddress().getHostAddress();
 						final Socket socket_out = new Socket(address, Integer.parseInt(port));
 						final DataOutputStream out = new DataOutputStream(socket_out.getOutputStream());
@@ -104,7 +106,7 @@ public class ServerClass {
 							}
 						}
 						if(repeated == false){
-							users.add(new UserClass(login, password, address, Integer.parseInt(port)));
+							users.add(new UserClass(login, password));
 							message = "created";
 							writeDatabase();
 						}

@@ -17,12 +17,20 @@ public class UserClass {
 		}
 	});
 	
-	public UserClass(String new_login, String new_password, String new_ip, int new_port){
+	public UserClass(String new_login, String new_password){
 		login = new_login;
 		password = new_password;
-		ip = new_ip;
-		port = new_port;
+		ip = "";
+		port = 0;
 		isOnline = false;
+	}
+	
+	public void set_ip(String new_ip){
+		ip = new_ip;
+	}
+	
+	public void set_port(int new_port){
+		port = new_port;
 	}
 	
 	public String get_login(){
